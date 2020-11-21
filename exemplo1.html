@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Webcam</title>
+        <meta charset=UTF-8>
+    </head>
+    <style>
+        body {
+            margin: 0px;
+            padding: 10px
+        } canvas {
+            display: none
+        }
+    </style>
+    <body>
+        <video width=480 height=270 autoplay></video><br>
+        <canvas width=480 height=270></canvas><br>
+        <video width=480 height=270 id=newvideo controls></video><br>
+        <input type=button value="Tirar Print"> <input type=button id=btnGrv value="Começar Gravação"> <input type=button value="Baixar vídeo" style="display: none">
+        <p>Brilho <input type=range min=0 max=10 value=1 step=.05> <input type=number value=1 disabled></p>
+        <p>Contraste <input type=range min=0 max=10 value=1 step=.05> <input type=number value=1 disabled></p>
+        <p>Saturação <input type=range min=0 max=10 value=1 step=.05> <input type=number value=1 disabled></p>
+        <p>Inverter <input type=range min=0 max=1 value=0 step=.05> <input type=number value=0 disabled></p>
+        <input type=button value="Retornar configuração inicial" style="display: none">
+    </body>
+    <script>
+        let vid = document.querySelector("video")
+        let range = document.querySelectorAll("input[type=range]")
+        let num = document.querySelectorAll("input[type=number]")
+        let ret = document.querySelector("input[value='Retornar configuração inicial']")
+        let downl = document.querySelector("input[value='Baixar vídeo']")
+        let cnv = document.querySelector("canvas")
+        let ctx = cnv.getContext("2d")
+        let filt = ""
+        let newA
+        let prop = ["brightness", "contrast", "saturate", "invert"]
+        document.querySelector("input[value='Tirar Print']").addEventListener("click", function() {
+            ctx.filter = filt
+            ctx.drawImage(vid, 0, 0, 480, 270)
+            let newA = document.createElement("a")
+            newA.href = cnv.toDataURL("image/jpeg", 1)
+            newA.download = "print"
+            document.body.appendChild(newA)
+            newA.click()
+            document.body.removeChild(newA)
+        }); ret.addEventListener("click", function() {
+            this.style.display = "none"
+            for(let k = 0; k < prop.length; k++) {
+                const padrao = 1 - Math.floor(k/3)
+                range[k].value = padrao
+                num[k].value = padrao
+            } vid.style.filter = ""
+            filt = ""
+        }); for(let y = 0; y < range.length; y++) {
+            range[y].addEventListener("input", function() {
+                filt = ""
+                ret.style.display = "none"
+                for(let k = 0; k < prop.length; k++) {
+                    const V = parseFloat(range[k].value)
+                    if(V !== 1 - Math.floor(k/3) && ret.style.display == "none") {
+                        ret.style.display = "block"
+                    } filt += prop[k] + "(" + V + ") "
+                    if(k !== prop.length - 1) {
+                        filt += " "
+                    }
+                } vid.style.filter = filt
+                num[y].value = this.value
+            });
+        } if(navigator.mediaDevices) {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 480, height: 270 } }).then(function(media) {
+                vid.srcObject = media
+                vid.onloadedmetadata = function() {
+                    this.play()
+                }; let dados = []
+                let gravar = new MediaRecorder(media)
+                gravar.ondataavailable = function(D) {
+                    dados.push(D.data)
+                }; gravar.onstop = function() {
+                    const blob = new Blob(dados, { type: "video/mp4" })
+                    console.log(blob)
+                    let reader = new FileReader()
+                    reader.readAsDataURL(blob)
+                    reader.onloadend = function() {
+                        document.querySelector("#newvideo").src = this.result
+                        let baixar = document.createElement("input")
+                        baixar.type = "button"
+                        baixar.value = "Baixar Vídeo"
+                        if(downl.style.display == "none") {
+                            downl.style.display = "inline"
+                        } if(newA !== undefined) {
+                            document.body.removeChild(newA)
+                        } newA = document.createElement("a")
+                        newA.href = this.result
+                        newA.download = "video"
+                        document.body.appendChild(newA)
+                        downl.onclick = function() {
+                            newA.click()
+                        };
+                        alert("Finalizado a gravação!")
+                    }; dados = []
+                }; document.querySelector("#btnGrv").addEventListener("click", function() {
+                    if(this.value == "Começar Gravação") {
+                        this.value = "Terminar Gravação"
+                        gravar.start()
+                    } else {
+                        this.value = "Começar Gravação"
+                        gravar.stop()
+                    }
+                });
+            }, function() {
+                alert("Você não permitiu usar os recursos de gravação em seu hardware!")
+            })
+        } else {
+            alert("Seu dispositivo não apresenta recursos de gravação... :/")
+        }
+    </script>
+</html>
