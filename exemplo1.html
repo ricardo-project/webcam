@@ -34,6 +34,7 @@
         let filt = ""
         let newA
         let prop = ["brightness", "contrast", "saturate", "invert"]
+        vid.volume = 0
         document.querySelector("input[value='Tirar Print']").addEventListener("click", function() {
             ctx.filter = filt
             ctx.drawImage(vid, 0, 0, 480, 270)
